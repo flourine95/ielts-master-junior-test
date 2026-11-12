@@ -36,7 +36,7 @@ npm run verify     # lint + typecheck + test
 Từng bước:
 
 ```bash
-npm test           # 36 test
+npm test           # 37 test
 npm run typecheck  # tsc --noEmit
 npm run lint       # eslint --max-warnings=0
 ```
@@ -49,7 +49,7 @@ $ npm test
  RUN  v5.1.0 D:/Projects/ielts-master-junior-test
 
  Test Files  4 passed (4)
-      Tests  36 passed (36)
+      Tests  37 passed (37)
    Duration  1.16s
 ```
 
@@ -60,7 +60,7 @@ Bốn file test chia theo tầng:
 | `tests/status.test.ts` | Bốn trường hợp đề yêu cầu, cộng biên: nộp đúng hạn, `now` đúng hạn, lệch 1 ms, so sánh hai timestamp khác offset |
 | `tests/assignment-service.test.ts` | Gọi đúng hàm mà page và API gọi. Có thêm ca `getAssignmentsForStudent("S02")` trả `["B01"]`, để chứng minh filter thật sự lọc chứ không trả rỗng |
 | `tests/api-route.test.ts` | Gọi thẳng `GET()` của route handler, không mock. `?studentId=S02`, tên tham số khác, tham số lặp, cookie lạ, `__proto__`, `constructor` đều không đổi được học viên |
-| `tests/assignment-filter.test.ts` | Bốn nút lọc chia đúng bốn dòng, không chồng không sót. A04 nộp trễ nằm trong "Đã nộp", khớp badge mà chính dòng đó hiển thị |
+| `tests/assignment-filter.test.ts` | Bốn bộ lọc chia đúng bốn dòng, không chồng, không sót. A04 nộp trễ nằm trong "Đã nộp", khớp badge mà chính dòng đó hiển thị. `?status=` rác rơi về "Tổng bài" chứ không thành bộ lọc |
 
 Kiểm tra API bằng tay:
 
@@ -71,6 +71,17 @@ curl -H "Cookie: ielts_session=demo-s02" http://localhost:3000/api/assignments
 ```
 
 Cả ba trả về A01 đến A04. S02 không xuất hiện trong bất kỳ response HTTP nào.
+
+## Bộ lọc
+
+Bốn ô số liệu ở đầu trang cũng là bốn bộ lọc. Trạng thái nằm trong URL
+(`/?status=overdue`) chứ không nằm trong state của component, nên:
+
+- chia sẻ được đường dẫn, reload giữ nguyên lựa chọn, nút Back hoạt động
+- chạy được cả khi tắt JavaScript
+- không cần thư viện toggle, không thêm JS vào bundle
+
+`Đã nộp` gồm cả A04 vì đề xếp A04 vào "Đã nộp" và chỉ thêm chú thích "Nộp trễ".
 
 ## Kết quả
 
@@ -114,9 +125,10 @@ học viên khác. Response được parse qua `assignmentsResponseSchema` trư�
 Schema dùng `strictObject` chứ không phải `object`: mặc định của Zod là bỏ key lạ,
 nên `studentId` lọt vào sẽ biến mất và trông như an toàn. Strict thì ném lỗi.
 
-API đặt `Cache-Control: no-store`. Trang chủ là server component không đọc request,
-nên Next prerender thành một HTML duy nhất. Nội dung đó giống nhau với mọi người vì
-mọi người đều là S01.
+API đặt `Cache-Control: no-store`. Trang chủ đọc `?status=` nên render theo từng
+request, không prerender. Giá trị đó chỉ chọn hiển thị bốn dòng đã lọc sẵn cho S01,
+nên nó không mở đường tới dữ liệu của người khác; nó đi qua `parseFilter` và bị
+đối chiếu với danh sách cho phép.
 
 ## Cấu trúc
 
@@ -125,7 +137,8 @@ src/
   app/
     api/assignments/route.ts   GET, validate payload rồi trả JSON
     page.tsx                   Server component, resolve danh tính rồi truyền xuống
-    assignment-list.tsx        Client: bốn nút lọc, bảng từ md, card dưới md
+    assignment-list.tsx        Server: bốn link lọc, bảng từ md, card dưới md
+    not-found.tsx              404 tiếng Việt, có đường về trang chủ
     status-cell.tsx            Badge trạng thái
     globals.css                Token shadcn + --success/--warning/--destructive-surface
   components/ui/               shadcn: badge, card, table, empty, separator

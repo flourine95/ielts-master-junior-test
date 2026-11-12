@@ -1,6 +1,4 @@
-"use client";
-
-import { useState } from "react";
+import Link from "next/link";
 import { CalendarClockIcon, ClockAlertIcon, InboxIcon } from "lucide-react";
 import {
   Card,
@@ -26,22 +24,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import type { AssignmentView, SubmissionState } from "@/lib/schema";
 import { StatusCell } from "./status-cell";
 
 /**
- * A filter, not a second authority on status.
+ * The filter lives in the URL, not in component state.
  *
- * Every row arrives already scoped to S01 and already carrying its status; this
- * component only chooses which of those rows to draw. Filtering here cannot
- * widen what the server sent, so a bug in this file can hide a row, never reveal
- * one that belonged to S02.
+ * `?status=overdue` is shareable, survives a reload, works with the browser's
+ * back button, and renders without JavaScript at all. That also keeps the page a
+ * server component: no toggle library, no client bundle, no hydration for what
+ * is four links.
  */
 export type Filter = "all" | SubmissionState;
 
-const FILTERS: { value: Filter; label: string }[] = [
+export const FILTERS: { value: Filter; label: string }[] = [
   { value: "all", label: "Tổng bài" },
   { value: "submitted", label: "Đã nộp" },
   { value: "overdue", label: "Quá hạn" },
@@ -49,11 +46,25 @@ const FILTERS: { value: Filter; label: string }[] = [
 ];
 
 /**
+ * Reads `?status=` back into a filter, falling back to "all".
+ *
+ * Anything a visitor can type arrives here, so the value is matched against the
+ * known list rather than cast; `?status=<script>` behaves like no parameter.
+ */
+export function parseFilter(value: string | string[] | undefined): Filter {
+  const candidate = Array.isArray(value) ? value[0] : value;
+
+  return FILTERS.some((option) => option.value === candidate)
+    ? (candidate as Filter)
+    : "all";
+}
+
+/**
  * Which rows a filter shows.
  *
  * "late-submission" counts as submitted: the brief puts A04 under "Đã nộp" and
  * adds "Nộp trễ" as an annotation, so a filter that hid it would contradict the
- * status the same row displays. Exported so that rule is testable without a DOM.
+ * status the same row displays.
  */
 export function matchesFilter(
   assignment: AssignmentView,
@@ -77,66 +88,85 @@ const TONE: Record<Filter, string> = {
   "late-submission": "text-success",
 };
 
-const EMPTY_COPY: Record<Filter, string> = {
-  all: "Chưa có bài tập nào được giao",
-  submitted: "Chưa nộp bài nào",
-  overdue: "Không có bài nào quá hạn",
-  "not-submitted": "Không còn bài nào đang chờ nộp",
-  "late-submission": "Không có bài nào nộp trễ",
+const EMPTY_COPY: Record<Filter, { title: string; description: string }> = {
+  all: {
+    title: "Chưa có bài tập nào được giao",
+    description: "Khi giảng viên giao bài, danh sách sẽ xuất hiện ở đây.",
+  },
+  submitted: {
+    title: "Chưa nộp bài nào",
+    description: "Chọn “Tổng bài” để xem lại toàn bộ danh sách.",
+  },
+  overdue: {
+    title: "Không có bài nào quá hạn",
+    description: "Chọn “Tổng bài” để xem lại toàn bộ danh sách.",
+  },
+  "not-submitted": {
+    title: "Không còn bài nào đang chờ nộp",
+    description: "Chọn “Tổng bài” để xem lại toàn bộ danh sách.",
+  },
+  "late-submission": {
+    title: "Không có bài nào nộp trễ",
+    description: "Chọn “Tổng bài” để xem lại toàn bộ danh sách.",
+  },
 };
 
-export function AssignmentList({ assignments }: { assignments: AssignmentView[] }) {
-  const [filter, setFilter] = useState<Filter>("all");
+export function AssignmentList({
+  assignments,
+  filter,
+}: {
+  assignments: AssignmentView[];
+  filter: Filter;
+}) {
   const visible = assignments.filter((assignment) =>
-      matchesFilter(assignment, filter)
-    );
+    matchesFilter(assignment, filter)
+  );
 
   return (
     <>
-      <ToggleGroup
-        type="single"
-        value={filter}
-        onValueChange={(next) => {
-          // Radix clears the value when the active item is pressed again; staying
-          // on that filter is what a reader expects from a stat row.
-          if (next) setFilter(next as Filter);
-        }}
-        aria-label="Lọc danh sách theo trạng thái"
-        className="grid w-full grid-cols-2 gap-2 sm:grid-cols-4"
-      >
-        {FILTERS.map((option) => {
-          const count = assignments.filter((a) =>
-            matchesFilter(a, option.value)
-          ).length;
+      <nav aria-label="Lọc theo trạng thái">
+        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {FILTERS.map((option) => {
+            const active = option.value === filter;
+            const count = assignments.filter((a) =>
+              matchesFilter(a, option.value)
+            ).length;
 
-          return (
-            <ToggleGroupItem
-              key={option.value}
-              value={option.value}
-              variant="outline"
-              aria-label={`${option.label}: ${count} bài`}
-              className={cn(
-                "group/tile h-auto w-full flex-col items-start gap-0.5 rounded-xl border-border px-3 py-2.5",
-                // Selected state has to survive a glance: a washed tint on a near
-                // white page is invisible. A 2px dark ring is not.
-                "data-[state=on]:border-foreground data-[state=on]:bg-foreground/[0.04] data-[state=on]:ring-2 data-[state=on]:ring-foreground/15"
-              )}
-            >
-              <span className="text-xs font-medium text-muted-foreground group-data-[state=on]/tile:text-foreground">
-                {option.label}
-              </span>
-              <span
-                className={cn(
-                  "font-heading text-2xl font-semibold tabular-nums",
-                  TONE[option.value]
-                )}
-              >
-                {count}
-              </span>
-            </ToggleGroupItem>
-          );
-        })}
-      </ToggleGroup>
+            return (
+              <li key={option.value}>
+                <Link
+                  href={option.value === "all" ? "/" : `/?status=${option.value}`}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "flex h-full flex-col items-start gap-0.5 rounded-xl border px-3 py-2.5 transition-colors",
+                    "hover:bg-muted/50 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+                    active
+                      ? "border-foreground/70 bg-muted/40"
+                      : "border-border"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "text-xs font-medium",
+                      active ? "text-foreground" : "text-muted-foreground"
+                    )}
+                  >
+                    {option.label}
+                  </span>
+                  <span
+                    className={cn(
+                      "font-heading text-2xl font-semibold tabular-nums",
+                      TONE[option.value]
+                    )}
+                  >
+                    {count}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
 
       {visible.length === 0 ? (
         <Empty className="mt-8 border">
@@ -144,12 +174,8 @@ export function AssignmentList({ assignments }: { assignments: AssignmentView[] 
             <EmptyMedia variant="icon">
               <InboxIcon />
             </EmptyMedia>
-            <EmptyTitle>{EMPTY_COPY[filter]}</EmptyTitle>
-            <EmptyDescription>
-              {filter === "all"
-                ? "Khi giảng viên giao bài, danh sách sẽ xuất hiện ở đây."
-                : "Chọn “Tổng bài” để xem lại toàn bộ danh sách."}
-            </EmptyDescription>
+            <EmptyTitle>{EMPTY_COPY[filter].title}</EmptyTitle>
+            <EmptyDescription>{EMPTY_COPY[filter].description}</EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (
@@ -158,17 +184,21 @@ export function AssignmentList({ assignments }: { assignments: AssignmentView[] 
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="px-4">Bài tập</TableHead>
-                  <TableHead className="px-4">
+                  <TableHead scope="col" className="px-4">
+                    Bài tập
+                  </TableHead>
+                  <TableHead scope="col" className="px-4">
                     <span className="inline-flex items-center gap-1.5">
-                      <CalendarClockIcon className="size-3.5" />
+                      <CalendarClockIcon className="size-3.5" aria-hidden />
                       Hạn nộp
                     </span>
                   </TableHead>
-                  <TableHead className="px-4">Đã nộp</TableHead>
-                  <TableHead className="px-4">
+                  <TableHead scope="col" className="px-4">
+                    Đã nộp
+                  </TableHead>
+                  <TableHead scope="col" className="px-4">
                     <span className="inline-flex items-center gap-1.5">
-                      <ClockAlertIcon className="size-3.5" />
+                      <ClockAlertIcon className="size-3.5" aria-hidden />
                       Trạng thái
                     </span>
                   </TableHead>

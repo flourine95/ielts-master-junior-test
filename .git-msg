@@ -1,26 +1,19 @@
-feat: the four summary tiles now filter the list
+refactor: filter via the URL, and stop shipping JS for it
 
-They read as controls and did nothing. The brief asks for no interaction, so this
-is not a requirement: it removes a dead affordance rather than adding a feature.
+The filter was client state, which meant 24 KB of gzip for four choices that are
+really four pages. `?status=overdue` is shareable, survives reload, works with the
+Back button, and renders with JavaScript off. The page is a server component
+again, so the toggle library and both its files are gone.
 
-ToggleGroup with type="single", so the semantics are a radio group: Tab reaches it,
-arrows move between filters, Space selects. Pressing the active one again keeps it
-selected instead of clearing to a state the tiles do not display.
+parseFilter matches the incoming value against the known list instead of casting
+it. A visitor can type anything into that parameter; `?status=<script>` now
+behaves exactly like no parameter, and a test asserts it.
 
-"Đã nộp" includes late submissions. The brief lists A04 as Đã nộp with Nộp trễ as
-an annotation, so filtering it out of its own status would contradict the badge on
-the same row. matchesFilter carries that rule and is exported so a test can assert
-it without a DOM.
+Also added: a Vietnamese not-found page. With real URLs in play, a mistyped path
+was landing on Next's default English 404 with no way back.
 
-The filter can only narrow what the server sent: it runs on the four rows already
-scoped to S01, so a bug here hides a row and cannot reveal B01.
+Client JS: 638 KB raw / 196 KB gzip -> 580 KB / 176 KB. Verified with the
+detector at 1280 and 390, by clicking through at both widths, by navigating
+?status= directly, and with JavaScript disabled.
 
-Selected state: data-[state=on] draws a 2px dark ring and a 4% wash. The default
-Radix tint was invisible on a near-white page, which I confirmed by reading
-computed styles rather than by eye.
-
-Cost: the ToggleGroup primitive adds 67 KB raw / 24 KB gzip to the client bundle,
-which is the real price of the control.
-
-Tests 32 to 36. Verified by clicking through the running build at 1280 and 400px,
-and by keyboard: Tab, ArrowRight, Space.
+Tests 36 to 37.

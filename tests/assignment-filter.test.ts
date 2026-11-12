@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { matchesFilter, type Filter } from "@/app/assignment-list";
+import {
+  matchesFilter,
+  parseFilter,
+  type Filter,
+} from "@/app/assignment-list";
 import { getAssignmentsForStudent } from "@/lib/assignment-service";
 import { SIMULATED_NOW } from "@/lib/now";
 
@@ -27,6 +31,15 @@ describe("status filter", () => {
   it("separates the three unsubmitted outcomes", () => {
     expect(idsShownBy("overdue")).toEqual(["A02"]);
     expect(idsShownBy("not-submitted")).toEqual(["A01"]);
+  });
+
+  it("treats anything unrecognised in ?status= as no filter", () => {
+    expect(parseFilter("overdue")).toBe("overdue");
+    expect(parseFilter(["submitted", "overdue"])).toBe("submitted");
+    // A visitor can type this; it must not become a filter, a lookup, or an error.
+    expect(parseFilter("<script>alert(1)</script>")).toBe("all");
+    expect(parseFilter("status=overdue")).toBe("all");
+    expect(parseFilter(undefined)).toBe("all");
   });
 
   it("never lets a filter widen the server's scope", () => {

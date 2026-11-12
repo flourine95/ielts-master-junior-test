@@ -1,16 +1,21 @@
 import { getAssignmentsForStudent } from "@/lib/assignment-service";
 import { getSession } from "@/lib/session";
 import { SIMULATED_NOW_ISO, SIMULATED_NOW_LABEL } from "@/lib/now";
-import { AssignmentList } from "./assignment-list";
+import { AssignmentList, parseFilter } from "./assignment-list";
 
 /**
- * Server component: resolves identity, filters, and formats before any HTML
- * leaves the process. The client component below receives only S01's rows, so
- * the filter controls can narrow that list but have nothing else to reveal.
+ * Server component. It reads one value from the URL — the status filter — and
+ * nothing else. Identity still comes only from `getSession()`, so `?status=`
+ * cannot reach a row that S01 does not own.
  */
-export default async function MyAssignmentsPage() {
+export default async function MyAssignmentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const session = await getSession();
   const assignments = getAssignmentsForStudent(session.studentId);
+  const filter = parseFilter((await searchParams).status);
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
@@ -29,7 +34,7 @@ export default async function MyAssignmentsPage() {
         </p>
       </header>
 
-      <AssignmentList assignments={assignments} />
+      <AssignmentList assignments={assignments} filter={filter} />
 
       <footer className="mt-8 text-xs text-muted-foreground">
         Dữ liệu thuộc tài khoản đang đăng nhập; danh sách được lọc ở server.
