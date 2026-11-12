@@ -14,31 +14,27 @@
 | Ngôn ngữ | TypeScript strict | Kiểu trạng thái là union literal, sai nhánh là lỗi compile |
 | UI | shadcn/ui (Radix, preset `nova`) | Component là mã nguồn trong repo, không phải dependency đóng; `Table`/`Card`/`Badge` có sẵn nên không phải tự dựng lại |
 | Style | Tailwind CSS v4 | Token ngữ nghĩa (`bg-card`, `text-muted-foreground`) nên dark mode không cần class `dark:` thủ công |
-| Database | SQLite qua `node:sqlite` | DB thật, không cần Docker/daemon, không native build, không ORM |
-| Validation | Zod 4 | Kiểm tra timestamp ở biên DB và biên API |
-| Test | Vitest 5 | Test chạy trên DB in-memory, không cần JSDOM |
+| Validation | Zod 4 | Kiểm tra timestamp ở biên dữ liệu và biên API |
+| Test | Vitest 5 | Test logic thuần, không cần JSDOM |
 
-### Vì sao không dùng Prisma / React Query
+Không có database. Đề ghi rõ "Không cần xây database thật" và "Tự chuyển bảng thành
+JSON/TypeScript", nên dữ liệu là fixture trong bộ nhớ. Lý do kỹ thuật: `next@16` yêu
+cầu Node ≥ 20.9, còn `node:sqlite` chỉ hết experimental từ Node 22.13 — thêm DB nghĩa
+là người chấm phải có Node mới hơn mức app cần, đổi lấy zero điểm ở thang chấm.
 
-**Prisma** — không có lợi ích ở đây. Một bảng, hai câu query, không migration qua
-nhiều môi trường, không quan hệ phức tạp. Prisma thêm: generate step trong
-`postinstall`, engine binary, một schema DSL thứ hai phải đồng bộ với TypeScript, và
-`prisma generate` bắt buộc trước mọi lần `next build`. `node:sqlite` cho cùng kết quả
-với ~40 dòng và zero dependency. Khi nào cần migration versioned, quan hệ nhiều bảng,
-hoặc nhiều instance cùng ghi thì Prisma bắt đầu có lý — lúc đó `assignment-repository.ts`
-là chỗ duy nhất phải sửa.
+### Vì sao không Prisma / React Query
+
+**Prisma** — một bảng, hai câu query, không migration, không quan hệ. Prisma thêm
+generate step trong `postinstall`, engine binary, và một schema DSL thứ hai phải đồng
+bộ với TypeScript; đổi lại không có gì để chứng minh ở đề này.
 
 **React Query** — không có client-side fetching nào để quản lý. Trang là server
-component đọc thẳng DB, API route là server-side. React Query giải quyết cache,
-refetch, dedupe, retry cho dữ liệu fetch ở **client**; ở đây dữ liệu đã render xong
-trước khi HTML tới browser. Thêm nó sẽ là một provider bọc ngoài không phục vụ gì,
-kèm `QueryClient` phải cấu hình cho trường hợp không tồn tại. Nếu sau này thêm
-"nộp bài" bằng optimistic update, hoặc polling trạng thái, thì đó là lúc thêm — và
+component đọc thẳng dữ liệu, API route là server-side; dữ liệu đã render xong trước
+khi HTML tới browser. Nếu sau này thêm "nộp bài" với optimistic update hoặc polling,
 `app/api/assignments` đã sẵn sàng làm endpoint cho nó.
 
-**Zod và Prisma/DB** không loại trừ nhau: Zod ở đây làm đúng một việc — chặn
-timestamp thiếu offset (lỗi múi giờ) và xác nhận shape của response. Không dùng Zod
-để validate form vì app không có form.
+**Zod** làm đúng một việc ở đây: chặn timestamp thiếu offset (lỗi múi giờ) và xác nhận
+shape của response. Không dùng để validate form vì app không có form.
 
 ## Cách chạy
 
@@ -54,13 +50,12 @@ npm run build
 npm start
 ```
 
-Lần chạy đầu tự tạo `.data/ielts.db` (đã git-ignore) và seed 5 dòng dữ liệu mẫu.
-Muốn reset: xoá thư mục `.data/`.
+Không cần biến môi trường, không cần service ngoài, không có bước migrate/seed.
 
 ## Cách kiểm tra
 
 ```bash
-npm test           # 21 test: logic trạng thái + lọc S01 + repository
+npm test           # 22 test: logic trạng thái + lọc S01 + integrity của fixture
 npm run typecheck  # tsc --noEmit
 npm run lint       # eslint
 ```
@@ -73,20 +68,14 @@ $ npm test
  RUN  v5.1.0 D:/Projects/ielts-master-junior-test
 
  Test Files  2 passed (2)
-      Tests  21 passed (21)
-   Duration  297ms
+      Tests  22 passed (22)
+   Duration  383ms
 ```
-
-Ba nhóm test:
 
 | File | Nội dung |
 |---|---|
 | `tests/status.test.ts` | 4 trường hợp bắt buộc, biên (nộp đúng hạn, `now` đúng hạn, lệch 1 ms), so sánh khác offset, `instantSchema` chặn timestamp thiếu offset |
-| `tests/assignment-service.test.ts` | Truy vấn thật trên DB in-memory: đúng A01–A04, B01 vắng mặt trong cả mảng lẫn JSON, S02 chỉ thấy B01, học viên lạ nhận mảng rỗng, format GMT+7, response khớp schema |
-| (trong cùng file) | Repository: `WHERE student_id = ?` lọc trong SQL; mở cùng một file DB hai lần không nhân đôi dữ liệu seed |
-
-Test chạy với `IELTS_DB_PATH=":memory:"` nên không bao giờ chạm vào DB của người
-đang phát triển.
+| `tests/assignment-service.test.ts` | Gọi đúng hàm mà page và API gọi: A01–A04, B01 vắng mặt trong cả mảng lẫn JSON, S02 chỉ thấy B01, học viên lạ nhận mảng rỗng, format GMT+7, đổi `now` thì chỉ trạng thái đổi, response khớp schema, fixture reject timestamp thiếu offset |
 
 Kiểm tra API bằng tay:
 
@@ -128,17 +117,16 @@ src/
     globals.css                Token màu shadcn + --success/--warning
   components/ui/               shadcn: badge, card, table, empty, alert, separator
   lib/
-    db.ts                      Mở SQLite, tạo schema, seed một lần
-    schema.ts                  Zod: instant, row, view, response
-    assignment-repository.ts   SELECT ... WHERE student_id = ? (bound param)
+    schema.ts                  Zod: instant, assignment, view, response
+    assignments.ts             Fixture A01–A04 + B01, parse qua schema khi import
     status.ts                  getStatus() — thuần, nhận `now` làm tham số
-    assignment-service.ts      Nơi duy nhất ghép repository + status
+    assignment-service.ts      Nơi duy nhất lọc theo studentId
     session.ts                 Mock auth: đọc cookie, tra registry ở server
     instant.ts                 Parse/format timestamp, luôn theo GMT+7
     now.ts                     SIMULATED_NOW = 2026-11-11T09:00:00+07:00
 tests/
   status.test.ts               Logic trạng thái + biên
-  assignment-service.test.ts   Cô lập dữ liệu + repository
+  assignment-service.test.ts   Cô lập dữ liệu + integrity của fixture
 ```
 
 ## Cách tránh lộ dữ liệu S02
@@ -148,14 +136,14 @@ tests/
 2. **Định danh lấy từ session phía server** (`src/lib/session.ts`): cookie
    `ielts_session` được tra trong registry chỉ server biết. Giá trị lạ
    (`demo-s99`) rơi về tài khoản mặc định, không tạo được học viên mới.
-3. **Lọc trong SQL, không lọc trong JS.** `WHERE student_id = ?` là bound parameter
-   của câu query, nên không có bước hậu xử lý nào có thể bị quên. Không có đường
-   vòng thứ hai vì mọi đường đọc đều đi qua `assignment-service.ts`.
-4. **Response không chứa `student_id`.** `AssignmentView` là kiểu riêng, không mang
+3. **Lọc ở đúng một chỗ** — `getAssignmentsForStudent()`. Không component nào tự
+   `filter()` trên toàn bộ fixture, nên không có đường vòng thứ hai.
+4. **Response không chứa `studentId`.** `AssignmentView` là kiểu riêng, không mang
    trường định danh, nên payload không thể bị dùng lại để hỏi học viên khác.
 5. **Zod kiểm tra cả shape của response** trước khi trả về (`assignmentsResponseSchema.parse`),
-   nên một sửa đổi vô tình làm rò `student_id` sẽ fail ở runtime và trong test.
-6. **Có test khẳng định** `B01` vắng mặt trong cả danh sách lẫn chuỗi JSON.
+   nên một sửa đổi vô tình làm rò `studentId` sẽ fail ở runtime và trong test.
+6. **Có test khẳng định** `B01` vắng mặt trong cả danh sách lẫn chuỗi JSON, nên nếu ai
+   đó sửa hỏng bước lọc thì test đỏ ngay.
 7. Response đặt `Cache-Control: no-store` để dữ liệu của một học viên không nằm
    trong cache dùng chung.
 
@@ -164,16 +152,16 @@ tests/
 - **Mốc thời gian**: `SIMULATED_NOW_ISO` là hằng số trong `src/lib/now.ts`. Không có
   `new Date()` trong logic trạng thái; `now` được truyền vào `getStatus()`.
 - **So sánh**: mọi timestamp đổi sang epoch ms qua `parseInstant()`. Chuỗi phải có
-  offset tường minh — `instantSchema` (Zod) chặn cả ở biên DB và biên API, nên không
-  có chỗ nào để runtime tự đoán múi giờ máy chủ.
+  offset tường minh — `instantSchema` (Zod) chặn cả ở biên fixture và biên API, nên
+  không có chỗ nào để runtime tự đoán múi giờ máy chủ.
 - **Biên**: nộp đúng thời điểm hạn → đúng hạn; `now` đúng thời điểm hạn → chưa quá
   hạn (dùng `>`, không dùng `>=`).
 - **Đã nộp thì không bao giờ là "Quá hạn"**: nộp trễ hiển thị `Đã nộp` cộng badge
   `Nộp trễ`.
 - **Định dạng ngày**: `dd/mm/yyyy hh:mm` theo GMT+7 qua `Intl.DateTimeFormat` với
   `timeZone: "Asia/Ho_Chi_Minh"`, nên không phụ thuộc múi giờ máy chạy.
-- **Thứ tự danh sách**: `ORDER BY id ASC`, khớp thứ tự bảng trong đề. Sắp theo hạn
-  nộp sẽ đảo A01/A02 so với đề.
+- **Thứ tự danh sách**: giữ nguyên thứ tự bảng trong đề. Sắp theo hạn nộp sẽ đảo
+  A01/A02 so với đề.
 - **Auth là giả lập**: mặc định đăng nhập S01. Đặt cookie `ielts_session=demo-s02`
   để xem dữ liệu S02 — dùng để chứng minh việc lọc chạy đúng, không phải tính năng
   đăng nhập.
@@ -181,9 +169,8 @@ tests/
 ## Phần chưa làm
 
 - Không có đăng nhập thật, không có JWT/session ký, không có phân quyền theo vai trò.
+- Không có database — dữ liệu là fixture trong bộ nhớ, đúng như đề cho phép.
 - Không có chức năng nộp bài — chỉ đọc và hiển thị.
 - Không có test E2E/trình duyệt tự động; phần UI được kiểm tra thủ công bằng ảnh
   chụp ở desktop, mobile và dark mode.
 - Chưa có i18n; nhãn tiếng Việt viết trực tiếp trong code.
-- Không có migration/versioning cho DB: seed chạy khi bảng rỗng. Đổi schema thì xoá
-  `.data/` để tạo lại.

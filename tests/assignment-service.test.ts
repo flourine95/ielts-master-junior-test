@@ -1,20 +1,16 @@
-import { randomUUID } from "node:crypto";
-import { rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { getAssignmentsForStudent } from "@/lib/assignment-service";
-import { openDatabase } from "@/lib/db";
-import { selectAssignmentsByStudent } from "@/lib/assignment-repository";
+import { ASSIGNMENTS } from "@/lib/assignments";
 import { SIMULATED_NOW } from "@/lib/now";
-import { assignmentsResponseSchema } from "@/lib/schema";
+import { assignmentSchema, assignmentsResponseSchema } from "@/lib/schema";
+import { parseInstant } from "@/lib/instant";
 
 /**
- * These tests exercise the real query path — `getAssignmentsForStudent` opens a
- * freshly seeded in-memory database, so a broken WHERE clause fails here rather
- * than being papered over by an in-memory fixture.
+ * These tests exercise the same function the page and the API call — not a
+ * re-implementation of the filter — so a broken WHERE-style predicate fails
+ * here rather than being papered over.
  */
-describe("assignment data scoping", () => {
+describe("assignment scoping", () => {
   const s01 = getAssignmentsForStudent("S01", SIMULATED_NOW);
 
   it("returns exactly S01's four assignments, in table order", () => {
@@ -74,34 +70,38 @@ describe("assignment data scoping", () => {
     });
     expect(payload.assignments).toHaveLength(4);
   });
+
+  it("changes nothing when the clock moves but the data does not", () => {
+    // Same rows, a later "now": A01 flips to overdue, the rest keep their state.
+    const later = parseInstant("2026-11-14T09:00:00+07:00");
+    expect(
+      getAssignmentsForStudent("S01", later).map((a) => [a.id, a.status])
+    ).toEqual([
+      ["A01", "overdue"],
+      ["A02", "overdue"],
+      ["A03", "submitted"],
+      ["A04", "late-submission"],
+    ]);
+  });
 });
 
-describe("repository", () => {
-  it("filters in SQL, so an unknown id never sees seeded rows", () => {
-    const db = openDatabase(":memory:");
-    try {
-      expect(selectAssignmentsByStudent(db, "S01")).toHaveLength(4);
-      expect(selectAssignmentsByStudent(db, "S02")).toHaveLength(1);
-      expect(selectAssignmentsByStudent(db, "NOPE")).toEqual([]);
-    } finally {
-      db.close();
-    }
+describe("fixture integrity", () => {
+  it("validates at module load, so a malformed timestamp cannot ship", () => {
+    expect(() =>
+      assignmentSchema.parse({
+        id: "X",
+        studentId: "S01",
+        title: "No offset",
+        dueAt: "2026-11-13T23:59:00",
+        submittedAt: null,
+      })
+    ).toThrow();
   });
 
-  it("seeds only once when the same file is opened twice", () => {
-    const file = path.join(tmpdir(), `ielts-${randomUUID()}.db`);
-    try {
-      const first = openDatabase(file);
-      expect(selectAssignmentsByStudent(first, "S01")).toHaveLength(4);
-      first.close();
-
-      const second = openDatabase(file);
-      expect(selectAssignmentsByStudent(second, "S01")).toHaveLength(4);
-      second.close();
-    } finally {
-      rmSync(file, { force: true });
-      rmSync(`${file}-wal`, { force: true });
-      rmSync(`${file}-shm`, { force: true });
+  it("every seeded row parses and uses an explicit offset", () => {
+    for (const assignment of ASSIGNMENTS) {
+      expect(assignmentSchema.safeParse(assignment).success).toBe(true);
+      expect(assignment.dueAt).toMatch(/[+-]\d{2}:\d{2}$/);
     }
   });
 });

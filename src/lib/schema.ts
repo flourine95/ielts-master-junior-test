@@ -6,22 +6,31 @@ import { z } from "zod";
  * `z.iso.datetime({ offset: true })` rejects `"2026-11-13T23:59:00"` (no offset)
  * and `"2026-11-13"` alike. Without that rule, `Date.parse` would silently read
  * an offset-less string in the server's own timezone, which is exactly the bug
- * this exercise is built around. Validating at the boundary means the rest of
- * the code can treat instants as trustworthy.
+ * this exercise is built around.
  */
 export const instantSchema = z.iso.datetime({ offset: true });
 
 /**
- * A row exactly as it comes out of SQLite. `node:sqlite` returns untyped values,
- * so this schema is what turns `unknown[]` into something the compiler can see.
+ * One seeded assignment, exactly as the brief's table represents it.
+ *
+ * `studentId` lives here and nowhere else: it is used to filter, then dropped.
+ * The view type below is what callers receive, and it carries no identity field,
+ * so a payload can never be replayed against another student.
  */
-export const assignmentRowSchema = z.object({
+export const assignmentSchema = z.object({
   id: z.string().min(1),
-  student_id: z.string().min(1),
+  studentId: z.string().min(1),
   title: z.string().min(1),
-  due_at: instantSchema,
-  submitted_at: instantSchema.nullable(),
+  dueAt: instantSchema,
+  submittedAt: instantSchema.nullable(),
 });
+
+export const submissionStateSchema = z.enum([
+  "not-submitted",
+  "overdue",
+  "submitted",
+  "late-submission",
+]);
 
 /** What the service is allowed to hand to the UI. */
 export const assignmentViewSchema = z.object({
@@ -31,7 +40,7 @@ export const assignmentViewSchema = z.object({
   dueAtLabel: z.string(),
   submittedAt: instantSchema.nullable(),
   submittedAtLabel: z.string().nullable(),
-  status: z.enum(["not-submitted", "overdue", "submitted", "late-submission"]),
+  status: submissionStateSchema,
   statusLabel: z.enum(["Chưa nộp", "Quá hạn", "Đã nộp"]),
   late: z.boolean(),
 });
@@ -43,7 +52,7 @@ export const assignmentsResponseSchema = z.object({
   assignments: z.array(assignmentViewSchema),
 });
 
-export type AssignmentRow = z.infer<typeof assignmentRowSchema>;
+export type Assignment = z.infer<typeof assignmentSchema>;
 export type AssignmentView = z.infer<typeof assignmentViewSchema>;
 export type AssignmentsResponse = z.infer<typeof assignmentsResponseSchema>;
-export type SubmissionState = AssignmentView["status"];
+export type SubmissionState = z.infer<typeof submissionStateSchema>;

@@ -1,19 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { getStatus } from "@/lib/status";
 import { SIMULATED_NOW, SIMULATED_NOW_ISO } from "@/lib/now";
-import { instantSchema, type AssignmentRow } from "@/lib/schema";
+import { instantSchema, type Assignment } from "@/lib/schema";
 
-const row = (
+const assignment = (
   dueAt: string,
   submittedAt: string | null
-): Pick<AssignmentRow, "due_at" | "submitted_at"> => ({
-  due_at: dueAt,
-  submitted_at: submittedAt,
+): Pick<Assignment, "dueAt" | "submittedAt"> => ({
+  dueAt,
+  submittedAt,
 });
 
 describe("getStatus — the four required cases at 11/11/2026 09:00 (GMT+7)", () => {
   it("A01: unsubmitted, deadline in the future → Chưa nộp", () => {
-    expect(getStatus(row("2026-11-13T23:59:00+07:00", null), SIMULATED_NOW)).toEqual({
+    expect(getStatus(assignment("2026-11-13T23:59:00+07:00", null), SIMULATED_NOW)).toEqual({
       status: "not-submitted",
       statusLabel: "Chưa nộp",
       late: false,
@@ -21,7 +21,7 @@ describe("getStatus — the four required cases at 11/11/2026 09:00 (GMT+7)", ()
   });
 
   it("A02: unsubmitted, deadline passed → Quá hạn", () => {
-    expect(getStatus(row("2026-11-09T23:59:00+07:00", null), SIMULATED_NOW)).toEqual({
+    expect(getStatus(assignment("2026-11-09T23:59:00+07:00", null), SIMULATED_NOW)).toEqual({
       status: "overdue",
       statusLabel: "Quá hạn",
       late: false,
@@ -31,7 +31,7 @@ describe("getStatus — the four required cases at 11/11/2026 09:00 (GMT+7)", ()
   it("A03: submitted before the deadline → Đã nộp, not late", () => {
     expect(
       getStatus(
-        row("2026-11-10T23:59:00+07:00", "2026-11-10T20:00:00+07:00"),
+        assignment("2026-11-10T23:59:00+07:00", "2026-11-10T20:00:00+07:00"),
         SIMULATED_NOW
       )
     ).toEqual({ status: "submitted", statusLabel: "Đã nộp", late: false });
@@ -40,7 +40,7 @@ describe("getStatus — the four required cases at 11/11/2026 09:00 (GMT+7)", ()
   it("A04: submitted after the deadline → Đã nộp + Nộp trễ, never Quá hạn", () => {
     expect(
       getStatus(
-        row("2026-11-08T23:59:00+07:00", "2026-11-10T12:00:00+07:00"),
+        assignment("2026-11-08T23:59:00+07:00", "2026-11-10T12:00:00+07:00"),
         SIMULATED_NOW
       )
     ).toEqual({ status: "late-submission", statusLabel: "Đã nộp", late: true });
@@ -50,18 +50,18 @@ describe("getStatus — the four required cases at 11/11/2026 09:00 (GMT+7)", ()
 describe("getStatus — boundaries", () => {
   it("submitting exactly at the deadline is on time", () => {
     const dueAt = "2026-11-10T23:59:00+07:00";
-    expect(getStatus(row(dueAt, dueAt), SIMULATED_NOW).late).toBe(false);
+    expect(getStatus(assignment(dueAt, dueAt), SIMULATED_NOW).late).toBe(false);
   });
 
   it("now exactly at the deadline is not yet overdue", () => {
     expect(
-      getStatus(row("2026-11-11T09:00:00+07:00", null), SIMULATED_NOW)
+      getStatus(assignment("2026-11-11T09:00:00+07:00", null), SIMULATED_NOW)
     ).toEqual({ status: "not-submitted", statusLabel: "Chưa nộp", late: false });
   });
 
   it("one millisecond past the deadline is overdue", () => {
     expect(
-      getStatus(row("2026-11-11T08:59:59.999+07:00", null), SIMULATED_NOW).status
+      getStatus(assignment("2026-11-11T08:59:59.999+07:00", null), SIMULATED_NOW).status
     ).toBe("overdue");
   });
 
@@ -69,13 +69,13 @@ describe("getStatus — boundaries", () => {
     // 2026-11-11T09:00+07:00 == 2026-11-11T02:00Z, which is before
     // 2026-11-11T03:00Z. String comparison would get this backwards.
     expect(
-      getStatus(row("2026-11-11T03:00:00+00:00", null), SIMULATED_NOW).status
+      getStatus(assignment("2026-11-11T03:00:00+00:00", null), SIMULATED_NOW).status
     ).toBe("not-submitted");
   });
 
   it("never reads a late submission as overdue, even long after the deadline", () => {
     const result = getStatus(
-      row("2026-11-01T23:59:00+07:00", "2026-11-11T08:59:00+07:00"),
+      assignment("2026-11-01T23:59:00+07:00", "2026-11-11T08:59:00+07:00"),
       SIMULATED_NOW
     );
     expect(result.status).toBe("late-submission");
