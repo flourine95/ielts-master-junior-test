@@ -1,0 +1,26 @@
+feat: the four summary tiles now filter the list
+
+They read as controls and did nothing. The brief asks for no interaction, so this
+is not a requirement: it removes a dead affordance rather than adding a feature.
+
+ToggleGroup with type="single", so the semantics are a radio group: Tab reaches it,
+arrows move between filters, Space selects. Pressing the active one again keeps it
+selected instead of clearing to a state the tiles do not display.
+
+"Đã nộp" includes late submissions. The brief lists A04 as Đã nộp with Nộp trễ as
+an annotation, so filtering it out of its own status would contradict the badge on
+the same row. matchesFilter carries that rule and is exported so a test can assert
+it without a DOM.
+
+The filter can only narrow what the server sent: it runs on the four rows already
+scoped to S01, so a bug here hides a row and cannot reveal B01.
+
+Selected state: data-[state=on] draws a 2px dark ring and a 4% wash. The default
+Radix tint was invisible on a near-white page, which I confirmed by reading
+computed styles rather than by eye.
+
+Cost: the ToggleGroup primitive adds 67 KB raw / 24 KB gzip to the client bundle,
+which is the real price of the control.
+
+Tests 32 to 36. Verified by clicking through the running build at 1280 and 400px,
+and by keyboard: Tab, ArrowRight, Space.

@@ -36,7 +36,7 @@ npm run verify     # lint + typecheck + test
 Từng bước:
 
 ```bash
-npm test           # 32 test
+npm test           # 36 test
 npm run typecheck  # tsc --noEmit
 npm run lint       # eslint --max-warnings=0
 ```
@@ -48,18 +48,19 @@ $ npm test
 
  RUN  v5.1.0 D:/Projects/ielts-master-junior-test
 
- Test Files  3 passed (3)
-      Tests  32 passed (32)
-   Duration  1.14s
+ Test Files  4 passed (4)
+      Tests  36 passed (36)
+   Duration  1.16s
 ```
 
-Ba file test chia theo tầng:
+Bốn file test chia theo tầng:
 
 | File | Nội dung |
 |---|---|
 | `tests/status.test.ts` | Bốn trường hợp đề yêu cầu, cộng biên: nộp đúng hạn, `now` đúng hạn, lệch 1 ms, so sánh hai timestamp khác offset |
 | `tests/assignment-service.test.ts` | Gọi đúng hàm mà page và API gọi. Có thêm ca `getAssignmentsForStudent("S02")` trả `["B01"]`, để chứng minh filter thật sự lọc chứ không trả rỗng |
 | `tests/api-route.test.ts` | Gọi thẳng `GET()` của route handler, không mock. `?studentId=S02`, tên tham số khác, tham số lặp, cookie lạ, `__proto__`, `constructor` đều không đổi được học viên |
+| `tests/assignment-filter.test.ts` | Bốn nút lọc chia đúng bốn dòng, không chồng không sót. A04 nộp trễ nằm trong "Đã nộp", khớp badge mà chính dòng đó hiển thị |
 
 Kiểm tra API bằng tay:
 
@@ -123,7 +124,8 @@ mọi người đều là S01.
 src/
   app/
     api/assignments/route.ts   GET, validate payload rồi trả JSON
-    page.tsx                   Server component: bảng từ md, card dưới md
+    page.tsx                   Server component, resolve danh tính rồi truyền xuống
+    assignment-list.tsx        Client: bốn nút lọc, bảng từ md, card dưới md
     status-cell.tsx            Badge trạng thái
     globals.css                Token shadcn + --success/--warning/--destructive-surface
   components/ui/               shadcn: badge, card, table, empty, separator
