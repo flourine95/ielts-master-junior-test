@@ -19,7 +19,7 @@
   --muted-foreground: oklch(0.556 0 0);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
+  --destructive: oklch(0.55 0.235 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -146,5 +146,10 @@
   }
   html {
     @apply font-sans;
+  }
+  /* The simulated clock is a fixed instant, so a lone "(GMT+7)" on the last
+     line reads as a mistake. `pretty` pulls the token up on Chrome and Safari. */
+  p {
+    text-wrap: pretty;
   }
 }

@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 import { getAssignmentsForStudent } from "@/lib/assignment-service";
 import { getSession } from "@/lib/session";
 import { SIMULATED_NOW_ISO, SIMULATED_NOW_LABEL } from "@/lib/now";
@@ -50,7 +51,12 @@ function Summary({ assignments }: { assignments: AssignmentView[] }) {
             <span className="text-xs font-medium text-muted-foreground">
               {tile.label}
             </span>
-            <span className={`font-heading text-2xl font-semibold tabular-nums ${tile.tone}`}>
+            <span
+              className={cn(
+                "font-heading text-2xl font-semibold tabular-nums",
+                tile.tone
+              )}
+            >
               {tile.value}
             </span>
           </CardContent>
@@ -66,18 +72,15 @@ export default async function MyAssignmentsPage() {
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
-      <header className="mb-6 flex flex-col gap-1">
-        <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-          IELTS Master · E-learning
-        </p>
+      <header className="mb-8 flex flex-col gap-1.5">
         <h1 className="font-heading text-2xl font-semibold sm:text-3xl">
           Bài tập của tôi
         </h1>
         <p className="text-sm text-muted-foreground">
-          {session.name} · Trạng thái tính theo thời điểm giả lập{" "}
+          {session.name}, trạng thái tính tại{" "}
           <time
             dateTime={SIMULATED_NOW_ISO}
-            className="font-medium text-foreground"
+            className="font-medium tabular-nums text-foreground"
           >
             {SIMULATED_NOW_LABEL} (GMT+7)
           </time>

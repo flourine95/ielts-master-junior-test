@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "2d8b3e31-69d4-4001-993b-629b0f67e813",
+  "status": "current",
+  "command": "deliver",
+  "type": "lifecycle",
+  "input": "D:\\Projects\\ielts-master-junior-test\\.archify\\lifecycle-status-20261112-124509\\candidate.json",
+  "output": "D:\\Projects\\ielts-master-junior-test\\.archify\\lifecycle-status-20261112-124509\\status-lifecycle.html",
+  "specification": {
+    "sha256": "b921d2942f37821f78738a1e36fa060a866b182b4bf5ce5342a84db1c20f0f05",
+    "bytes": 7470
+  },
+  "artifact": {
+    "sha256": "820219447fde6a0a3e2eb9db764a84967b50299646f4a2ac1203585cd99e9948",
+    "bytes": 814398
+  }
+}

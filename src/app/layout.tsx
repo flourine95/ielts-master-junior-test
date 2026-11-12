@@ -1,9 +1,18 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Be_Vietnam_Pro } from "next/font/google";
 import { cn } from "@/lib/utils";
 import "./globals.css";
 
-const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
+/**
+ * Be Vietnam Pro, not Geist: the copy is Vietnamese, and Geist's Vietnamese
+ * subset ships a fallback outline for the stacked diacritics (ệ, ữ, ộ). This
+ * face was drawn for the language, so the marks sit at consistent heights.
+ */
+const sans = Be_Vietnam_Pro({
+  subsets: ["latin", "vietnamese"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans",
+});
 
 export const metadata: Metadata = {
   title: "Bài tập của tôi | IELTS Master",
@@ -25,7 +34,7 @@ export default function RootLayout({
   return (
     <html
       lang="vi"
-      className={cn("h-full antialiased", "font-sans", geist.variable)}
+      className={cn("h-full antialiased", "font-sans", sans.variable)}
       suppressHydrationWarning
     >
       <head>

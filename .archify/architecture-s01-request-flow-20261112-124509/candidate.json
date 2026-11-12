@@ -1,0 +1,349 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Bài tập của tôi: đường đi của một request S01",
+    "subtitle": "Next.js 16 App Router. Không đầu vào nào của request chọn được học viên.",
+    "locale": "vi",
+    "output": ".archify/architecture-s01-request-flow-20261112-124509/s01-request-flow.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/flourine95/ielts-master-junior-test.git",
+      "provider": "github",
+      "revision": "1cdd354e1dc56b579cbc5fa4943b5b980483cd7c"
+    },
+    "translations": {
+      "page.title": "{title}",
+      "legend.title": "Chú giải",
+      "legend.architecture.frontend": "Giao diện",
+      "legend.architecture.backend": "Xử lý phía server",
+      "legend.architecture.database": "Dữ liệu",
+      "legend.architecture.cloud": "Hạ tầng",
+      "legend.architecture.security": "Danh tính",
+      "legend.architecture.messagebus": "Hàng đợi",
+      "legend.architecture.external": "Bên ngoài",
+      "viewer.kind.frontend": "Giao diện",
+      "viewer.kind.backend": "Xử lý phía server",
+      "viewer.kind.database": "Dữ liệu",
+      "viewer.kind.cloud": "Hạ tầng",
+      "viewer.kind.security": "Danh tính",
+      "viewer.kind.messagebus": "Hàng đợi",
+      "viewer.kind.external": "Bên ngoài",
+      "viewer.toolbar.actions": "Thao tác với sơ đồ",
+      "viewer.motion.live": "Chạy",
+      "viewer.motion.still": "Đứng",
+      "viewer.motion.pause": "Tạm dừng",
+      "viewer.motion.resume": "Chạy tiếp",
+      "viewer.export.button": "Xuất",
+      "viewer.export.button.title": "Xuất sơ đồ",
+      "viewer.export.diagram": "Tệp sơ đồ",
+      "viewer.owner.route": "Dò đường",
+      "viewer.owner.lens": "Lọc theo loại",
+      "viewer.nav.zoomIn": "Phóng to",
+      "viewer.nav.zoomOut": "Thu nhỏ",
+      "viewer.nav.reset": "Về khung nhìn gốc",
+      "viewer.nav.reset.title": "Về khung nhìn gốc (0)",
+      "viewer.nav.find": "Tìm một nút",
+      "viewer.guide.title": "Đọc sơ đồ này",
+      "viewer.guide.close": "Đóng",
+      "viewer.guide.facts": "{nodes} · {relationships}",
+      "viewer.passport.metadata": "Thông tin nút",
+      "viewer.passport.evidence": "Nguồn đã đối chiếu",
+      "viewer.passport.close": "Đóng",
+      "viewer.passport.repository.open": "Mở đúng revision {revision} trên GitHub",
+      "viewer.passport.source.open": "Mở {path} tại revision {revision}",
+      "viewer.common.close": "Đóng",
+      "viewer.common.clear": "Xoá",
+      "viewer.common.copied": "Đã copy",
+      "viewer.common.copyFailed": "Copy không được",
+      "viewer.preset.choose.title": "Chọn kiểu trình bày (phím S)",
+      "viewer.preset.classic": "Cơ bản",
+      "viewer.preset.classic.short": "Cơ bản",
+      "node.focus": "Tập trung vào {label}",
+      "node.focus.detail": "Tập trung vào {label}, {detail}"
+    }
+  },
+  "components": [
+    {
+      "id": "browser",
+      "type": "external",
+      "label": "Trình duyệt",
+      "sublabel": "GET / hoặc /api/assignments",
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "page",
+      "type": "frontend",
+      "label": "page.tsx",
+      "sublabel": "server component, ≤ md thì card",
+      "tag": "prerendered",
+      "pos": [
+        270,
+        190
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "sources": [
+        {
+          "path": "src/app/page.tsx",
+          "line": 163,
+          "end_line": 175
+        }
+      ]
+    },
+    {
+      "id": "route",
+      "type": "backend",
+      "label": "GET /api/assignments",
+      "sublabel": "route handler, payload qua Zod",
+      "tag": "no-store",
+      "pos": [
+        270,
+        410
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "src/app/api/assignments/route.ts",
+          "line": 18,
+          "end_line": 30
+        }
+      ]
+    },
+    {
+      "id": "session",
+      "type": "security",
+      "label": "getSession()",
+      "sublabel": "trả hằng S01",
+      "tag": "không đọc input",
+      "pos": [
+        520,
+        300
+      ],
+      "size": [
+        150,
+        64
+      ],
+      "sources": [
+        {
+          "path": "src/lib/session.ts",
+          "line": 22,
+          "end_line": 29
+        }
+      ]
+    },
+    {
+      "id": "service",
+      "type": "backend",
+      "label": "getAssignmentsForStudent()",
+      "sublabel": "filter theo studentId",
+      "tag": "một cửa duy nhất",
+      "pos": [
+        750,
+        300
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "sources": [
+        {
+          "path": "src/lib/assignment-service.ts",
+          "line": 18,
+          "end_line": 25
+        }
+      ]
+    },
+    {
+      "id": "fixture",
+      "type": "database",
+      "label": "ASSIGNMENTS",
+      "sublabel": "A01–A04 (S01), B01 (S02)",
+      "tag": "mảng trong bộ nhớ",
+      "pos": [
+        750,
+        120
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "sources": [
+        {
+          "path": "src/lib/assignments.ts",
+          "line": 13,
+          "end_line": 24
+        }
+      ]
+    },
+    {
+      "id": "status",
+      "type": "backend",
+      "label": "toView() + getStatus()",
+      "sublabel": "4 trạng thái, now là tham số",
+      "tag": "hàm thuần",
+      "pos": [
+        750,
+        480
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "sources": [
+        {
+          "path": "src/lib/status.ts",
+          "line": 15,
+          "end_line": 35
+        }
+      ]
+    },
+    {
+      "id": "clock",
+      "type": "external",
+      "label": "SIMULATED_NOW",
+      "sublabel": "11/11/2026 09:00 +07:00",
+      "tag": "hằng, không phải giờ máy",
+      "pos": [
+        520,
+        560
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "sources": [
+        {
+          "path": "src/lib/now.ts",
+          "line": 9,
+          "end_line": 12
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Next.js server (Node)",
+      "wraps": [
+        "page",
+        "route",
+        "session",
+        "service",
+        "fixture",
+        "status",
+        "clock"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "browser-page",
+      "from": "browser",
+      "to": "page",
+      "label": "HTML",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "browser-route",
+      "from": "browser",
+      "to": "route",
+      "label": "JSON",
+      "fromSide": "right",
+      "toSide": "left",
+      "variant": "emphasis"
+    },
+    {
+      "id": "page-session",
+      "from": "page",
+      "to": "session",
+      "label": "studentId",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "route-session",
+      "from": "route",
+      "to": "session",
+      "label": "studentId",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "session-service",
+      "from": "session",
+      "to": "service",
+      "label": "S01",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "service-fixture",
+      "from": "service",
+      "to": "fixture",
+      "label": "filter",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "service-status",
+      "from": "service",
+      "to": "status",
+      "label": "map",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "variant": "dashed"
+    },
+    {
+      "id": "clock-status",
+      "from": "clock",
+      "to": "status",
+      "label": "now",
+      "fromSide": "right",
+      "toSide": "left",
+      "variant": "security"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "Vì sao B01 không lọt ra",
+      "items": [
+        "getSession() không đọc query, path, body, header hay cookie",
+        "getAssignmentsForStudent() là chỗ lọc duy nhất, page và API dùng chung",
+        "AssignmentView không có trường định danh; schema strictObject ném lỗi nếu lọt"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Thời gian",
+      "items": [
+        "SIMULATED_NOW là hằng trong src/lib/now.ts, không phải new Date()",
+        "getStatus() nhận now làm tham số nên test được với mốc cố định",
+        "So sánh dùng > nên now đúng hạn chưa tính là quá hạn"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Đã lái thử rồi bỏ",
+      "items": [
+        "Cookie ielts_session=demo-s02: ai đọc source cũng chuyển được sang S02, nên bỏ",
+        "node:sqlite: thêm tầng runtime mà không đổi logic trạng thái",
+        "Prisma và React Query: một bảng, không client fetching, không đủ việc để làm"
+      ]
+    }
+  ]
+}

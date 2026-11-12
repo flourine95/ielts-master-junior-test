@@ -1,0 +1,220 @@
+{
+  "schema_version": 3,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Bốn trạng thái của một bài tập",
+    "subtitle": "Xét tại 11/11/2026 09:00 +07:00. Nộp trễ vẫn là Đã nộp, chỉ thêm cờ late.",
+    "locale": "vi",
+    "output": ".archify/lifecycle-status-20261112-124509/status-lifecycle.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/flourine95/ielts-master-junior-test.git",
+      "provider": "github",
+      "revision": "1cdd354e1dc56b579cbc5fa4943b5b980483cd7c"
+    },
+    "translations": {
+      "page.title": "{title}",
+      "legend.title": "Chú giải",
+      "legend.architecture.frontend": "Giao diện",
+      "legend.architecture.backend": "Xử lý phía server",
+      "legend.architecture.database": "Dữ liệu",
+      "legend.architecture.cloud": "Hạ tầng",
+      "legend.architecture.security": "Danh tính",
+      "legend.architecture.messagebus": "Hàng đợi",
+      "legend.architecture.external": "Bên ngoài",
+      "viewer.kind.frontend": "Giao diện",
+      "viewer.kind.backend": "Xử lý phía server",
+      "viewer.kind.database": "Dữ liệu",
+      "viewer.kind.cloud": "Hạ tầng",
+      "viewer.kind.security": "Danh tính",
+      "viewer.kind.messagebus": "Hàng đợi",
+      "viewer.kind.external": "Bên ngoài",
+      "viewer.toolbar.actions": "Thao tác với sơ đồ",
+      "viewer.motion.live": "Chạy",
+      "viewer.motion.still": "Đứng",
+      "viewer.motion.pause": "Tạm dừng",
+      "viewer.motion.resume": "Chạy tiếp",
+      "viewer.export.button": "Xuất",
+      "viewer.export.button.title": "Xuất sơ đồ",
+      "viewer.export.diagram": "Tệp sơ đồ",
+      "viewer.owner.route": "Dò đường",
+      "viewer.owner.lens": "Lọc theo loại",
+      "viewer.nav.zoomIn": "Phóng to",
+      "viewer.nav.zoomOut": "Thu nhỏ",
+      "viewer.nav.reset": "Về khung nhìn gốc",
+      "viewer.nav.reset.title": "Về khung nhìn gốc (0)",
+      "viewer.nav.find": "Tìm một nút",
+      "viewer.guide.title": "Đọc sơ đồ này",
+      "viewer.guide.close": "Đóng",
+      "viewer.guide.facts": "{nodes} · {relationships}",
+      "viewer.passport.metadata": "Thông tin nút",
+      "viewer.passport.evidence": "Nguồn đã đối chiếu",
+      "viewer.passport.close": "Đóng",
+      "viewer.passport.repository.open": "Mở đúng revision {revision} trên GitHub",
+      "viewer.passport.source.open": "Mở {path} tại revision {revision}",
+      "viewer.common.close": "Đóng",
+      "viewer.common.clear": "Xoá",
+      "viewer.common.copied": "Đã copy",
+      "viewer.common.copyFailed": "Copy không được",
+      "viewer.preset.choose.title": "Chọn kiểu trình bày (phím S)",
+      "viewer.preset.classic": "Cơ bản",
+      "viewer.preset.classic.short": "Cơ bản",
+      "node.focus": "Tập trung vào {label}",
+      "node.focus.detail": "Tập trung vào {label}, {detail}",
+      "legend.lifecycle.start": "trạng thái đầu",
+      "legend.lifecycle.active": "đang chạy",
+      "legend.lifecycle.waiting": "chờ",
+      "legend.lifecycle.decision": "rẽ nhánh",
+      "legend.lifecycle.success": "kết thúc tốt",
+      "legend.lifecycle.failure": "kết thúc xấu",
+      "legend.lifecycle.neutral": "kết thúc trung tính",
+      "legend.lifecycle.external": "bên ngoài xử lý",
+      "legend.lifecycle.final": "trạng thái cuối",
+      "viewer.kind.start": "Bắt đầu",
+      "viewer.kind.active": "Đang chạy",
+      "viewer.kind.waiting": "Chờ",
+      "viewer.kind.decision": "Rẽ nhánh",
+      "viewer.kind.success": "Tốt",
+      "viewer.kind.failure": "Xấu",
+      "viewer.kind.neutral": "Trung tính"
+    }
+  },
+  "mainPath": [
+    "seeded",
+    "not-submitted",
+    "overdue"
+  ],
+  "states": [
+    {
+      "id": "seeded",
+      "type": "start",
+      "label": "Bài được giao",
+      "sublabel": "submittedAt = null",
+      "tag": "A01, A02",
+      "step": "01",
+      "icon": "start"
+    },
+    {
+      "id": "not-submitted",
+      "type": "waiting",
+      "label": "Chưa nộp",
+      "sublabel": "now ≤ dueAt",
+      "tag": "A01",
+      "step": "02",
+      "sources": [
+        {
+          "path": "src/lib/status.ts",
+          "line": 30,
+          "end_line": 34
+        }
+      ]
+    },
+    {
+      "id": "overdue",
+      "type": "failure",
+      "label": "Quá hạn",
+      "sublabel": "now > dueAt",
+      "tag": "A02",
+      "sources": [
+        {
+          "path": "src/lib/status.ts",
+          "line": 30,
+          "end_line": 32
+        }
+      ]
+    },
+    {
+      "id": "submitted-on-time",
+      "type": "success",
+      "label": "Đã nộp",
+      "sublabel": "submittedAt ≤ dueAt",
+      "tag": "A03",
+      "sources": [
+        {
+          "path": "src/lib/status.ts",
+          "line": 21,
+          "end_line": 28
+        }
+      ]
+    },
+    {
+      "id": "late-submission",
+      "type": "external",
+      "label": "Đã nộp + Nộp trễ",
+      "sublabel": "submittedAt > dueAt",
+      "tag": "A04",
+      "sources": [
+        {
+          "path": "src/lib/status.ts",
+          "line": 22,
+          "end_line": 27
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    {
+      "id": "seeded-to-not-submitted",
+      "from": "seeded",
+      "to": "not-submitted",
+      "label": "chưa có bài nộp"
+    },
+    {
+      "id": "not-submitted-to-overdue",
+      "from": "not-submitted",
+      "to": "overdue",
+      "label": "qua hạn",
+      "variant": "default"
+    },
+    {
+      "id": "seeded-to-submitted",
+      "from": "seeded",
+      "to": "submitted-on-time",
+      "label": "nộp trong hạn",
+      "variant": "emphasis"
+    },
+    {
+      "id": "seeded-to-late",
+      "from": "seeded",
+      "to": "late-submission",
+      "label": "nộp ngay, nhưng muộn",
+      "variant": "security"
+    },
+    {
+      "id": "overdue-to-late",
+      "from": "overdue",
+      "to": "late-submission",
+      "label": "nộp bù sau hạn",
+      "note": "Đã nộp thắng Quá hạn: kiểm tra submittedAt trước, nên nhánh này không bao giờ trả về Quá hạn"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Thứ tự kiểm tra quyết định kết quả",
+      "items": [
+        "submittedAt khác null thì trả ngay Đã nộp, kèm cờ late",
+        "Chỉ khi chưa nộp mới so now với dueAt",
+        "Nhờ vậy A04 không bao giờ hiện Quá hạn dù hạn đã qua từ 08/11"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Hai biên dễ sai",
+      "items": [
+        "Nộp đúng 23:59:00 vẫn tính đúng hạn, vì so sánh dùng strict greater-than",
+        "now đúng dueAt chưa tính quá hạn, cùng lý do",
+        "So sánh trên epoch ms sau parseInstant, không so chuỗi"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Vì sao now là tham số",
+      "items": [
+        "Không có new Date() trong getStatus, nên test chạy được với mốc 11/11 09:00",
+        "Đổi now trong test sẽ đổi trạng thái mà không cần đổi fixture",
+        "Cùng một hàm phục vụ page và API"
+      ]
+    }
+  ]
+}

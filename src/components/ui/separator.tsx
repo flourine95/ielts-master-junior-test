@@ -1,22 +1,23 @@
-"use client"
-
-import * as React from "react"
 import { cn } from "cn"
-import { Separator as SeparatorPrimitive } from "radix-ui"
 
+/**
+ * Static rule, not the Radix primitive: `RadixSeparator` is a client component
+ * and pulls the whole Radix runtime into the browser bundle for a div with a
+ * one-pixel background. `role="none"` keeps it out of the accessibility tree,
+ * which is what `decorative` did.
+ */
 function Separator({
-  className,
   orientation = "horizontal",
-  decorative = true,
+  className,
   ...props
-}: React.ComponentProps<typeof SeparatorPrimitive.Root>) {
+}: React.ComponentProps<"div"> & { orientation?: "horizontal" | "vertical" }) {
   return (
-    <SeparatorPrimitive.Root
+    <div
       data-slot="separator"
-      decorative={decorative}
-      orientation={orientation}
+      role="none"
       className={cn(
-        "shrink-0 bg-border data-horizontal:h-px data-horizontal:w-full data-vertical:w-px data-vertical:self-stretch",
+        "shrink-0 bg-border",
+        orientation === "horizontal" ? "h-px w-full" : "w-px self-stretch",
         className
       )}
       {...props}
