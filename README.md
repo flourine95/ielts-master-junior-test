@@ -87,6 +87,11 @@ B01 của S02 không có trong danh sách.
 Ảnh giao diện: [desktop](docs/screenshot-desktop.png),
 [mobile](docs/screenshot-mobile.png), [dark](docs/screenshot-dark.png).
 
+Hai sơ đồ đọc được trong trình duyệt, có nút chạy thử luồng:
+
+- [Đường đi của một request S01](.archify/architecture-s01-request-flow-20261112-124509/s01-request-flow.html)
+- [Bốn trạng thái của một bài tập](.archify/lifecycle-status-20261112-124509/status-lifecycle.html)
+
 ## Không lộ dữ liệu S02
 
 `getSession()` trong `src/lib/session.ts` trả hằng S01. Nó không đọc query, path,
