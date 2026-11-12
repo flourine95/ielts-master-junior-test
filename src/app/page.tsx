@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/table";
 import { getAssignmentsForStudent } from "@/lib/assignment-service";
 import { getSession } from "@/lib/session";
-import { SIMULATED_NOW_LABEL } from "@/lib/now";
+import { SIMULATED_NOW_ISO, SIMULATED_NOW_LABEL } from "@/lib/now";
 import type { AssignmentView } from "@/lib/schema";
 import { StatusCell } from "./status-cell";
 
@@ -76,7 +76,7 @@ export default async function MyAssignmentsPage() {
         <p className="text-sm text-muted-foreground">
           {session.name} · Trạng thái tính theo thời điểm giả lập{" "}
           <time
-            dateTime="2026-11-11T09:00:00+07:00"
+            dateTime={SIMULATED_NOW_ISO}
             className="font-medium text-foreground"
           >
             {SIMULATED_NOW_LABEL} (GMT+7)
@@ -100,7 +100,7 @@ export default async function MyAssignmentsPage() {
         </Empty>
       ) : (
         <>
-          <Card className="mt-8 hidden overflow-hidden py-0 sm:block">
+          <Card className="mt-8 hidden overflow-hidden py-0 md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -146,7 +146,7 @@ export default async function MyAssignmentsPage() {
             </Table>
           </Card>
 
-          <ul className="mt-6 flex flex-col gap-3 sm:hidden">
+          <ul className="mt-6 flex flex-col gap-3 md:hidden">
             {assignments.map((assignment) => (
               <li key={assignment.id}>
                 <Card size="sm">

@@ -32,8 +32,15 @@ export const submissionStateSchema = z.enum([
   "late-submission",
 ]);
 
-/** What the service is allowed to hand to the UI. */
-export const assignmentViewSchema = z.object({
+/**
+ * What the service is allowed to hand to the UI.
+ *
+ * `strictObject`, not `object`: Zod's default strips unknown keys, which would
+ * turn a leaked `studentId` into a silently-clean payload. Strict makes the same
+ * mistake throw at the boundary, so the leak is visible in the response and in
+ * the tests rather than quietly removed.
+ */
+export const assignmentViewSchema = z.strictObject({
   id: z.string(),
   title: z.string(),
   dueAt: instantSchema,
@@ -46,13 +53,12 @@ export const assignmentViewSchema = z.object({
 });
 
 /** The wire contract for GET /api/assignments, asserted in tests. */
-export const assignmentsResponseSchema = z.object({
-  viewer: z.object({ name: z.string() }),
+export const assignmentsResponseSchema = z.strictObject({
+  viewer: z.strictObject({ name: z.string() }),
   simulatedNow: instantSchema,
   assignments: z.array(assignmentViewSchema),
 });
 
 export type Assignment = z.infer<typeof assignmentSchema>;
 export type AssignmentView = z.infer<typeof assignmentViewSchema>;
-export type AssignmentsResponse = z.infer<typeof assignmentsResponseSchema>;
 export type SubmissionState = z.infer<typeof submissionStateSchema>;

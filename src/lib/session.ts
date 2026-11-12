@@ -1,32 +1,29 @@
-import { cookies } from "next/headers";
-
 /**
- * Stand-in for real authentication.
+ * The signed-in student, resolved entirely on the server.
  *
- * The brief forbids trusting a student id from the URL, so identity is read
- * server-side only: from a cookie the server set, and from a registry the client
- * cannot write. No route, page, or server action accepts `studentId` as input.
+ * The brief's rule is that a student id must never be taken from the request,
+ * and this module is where that rule is enforced: there is no query parameter,
+ * no path segment, no body field **and no cookie** that can name a student. A
+ * request can only ever receive the identity this file already knows about.
  *
- * In a real product this function would verify a signed session/JWT and return
- * the subject claim; the call sites would not change.
+ * That is deliberately the strictest reading. A cookie-selected demo account
+ * would have made "log in as S02" a one-liner for anyone who reads the source,
+ * which is indistinguishable from a leak in review — the filter would still be
+ * correct, but the payload would not be. S02 exists in the fixture and in the
+ * service tests so the filter is provably not a no-op; it just has no way to
+ * authenticate.
+ *
+ * The function is `async` and returns a session rather than exporting a
+ * constant, so replacing this stand-in with a real signed session/JWT changes
+ * one function body and no call site.
  */
-const SESSION_COOKIE = "ielts_session";
-
-/** Demo accounts that exist on the server. S01 is the signed-in student. */
-const SESSION_REGISTRY: Record<string, { studentId: string; name: string }> = {
-  "demo-s01": { studentId: "S01", name: "Học viên S01" },
-  "demo-s02": { studentId: "S02", name: "Học viên S02" },
-};
-
 export type Session = { studentId: string; name: string };
 
+const DEMO_SESSION: Session = {
+  studentId: "S01",
+  name: "Học viên S01",
+};
+
 export async function getSession(): Promise<Session> {
-  const jar = await cookies();
-  // Default to S01 so the page opens ready-to-grade; a different cookie value is
-  // resolved through the registry, so an attacker cannot invent "S03".
-  const token = jar.get(SESSION_COOKIE)?.value ?? "demo-s01";
-
-  return SESSION_REGISTRY[token] ?? SESSION_REGISTRY["demo-s01"];
+  return DEMO_SESSION;
 }
-
-export { SESSION_COOKIE };

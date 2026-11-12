@@ -62,6 +62,18 @@ describe("assignment scoping", () => {
     });
   });
 
+  it("rejects a leaked studentId instead of stripping it", () => {
+    // Zod's default `object` would drop the extra key and hand back a clean
+    // payload; `strictObject` makes the leak loud. The leak must fail, not vanish.
+    expect(
+      assignmentsResponseSchema.safeParse({
+        viewer: { name: "Học viên S01" },
+        simulatedNow: "2026-11-11T09:00:00+07:00",
+        assignments: [{ ...s01[0], studentId: "S01" }],
+      }).success
+    ).toBe(false);
+  });
+
   it("matches the API wire contract", () => {
     const payload = assignmentsResponseSchema.parse({
       viewer: { name: "Học viên S01" },

@@ -7,15 +7,15 @@ import { assignmentsResponseSchema } from "@/lib/schema";
 /**
  * GET /api/assignments
  *
- * The response is scoped to whoever the server says is signed in. Query
- * parameters are read for nothing: `?studentId=S02` changes nothing, which is
- * the point. The body carries no `studentId`, so the payload itself cannot be
- * replayed to fetch another student.
+ * The response is scoped to S01, resolved on the server. Nothing in the request
+ * is read: the parameter is accepted and deliberately unused, so a reader can
+ * see that no query string, header, cookie or body reaches the query. A body
+ * `studentId` would have nowhere to go — the payload carries none.
  *
- * The payload is validated on the way out, so the shape advertised here and the
- * shape the tests assert cannot drift apart silently.
+ * The payload is validated on the way out (`strictObject`), so an accidental
+ * extra field fails the request instead of being stripped and shipped.
  */
-export async function GET() {
+export async function GET(_request: Request) {
   const session = await getSession();
 
   const payload = assignmentsResponseSchema.parse({

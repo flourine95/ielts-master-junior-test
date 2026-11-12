@@ -18,9 +18,13 @@
 | Test | Vitest 5 | Test logic thuần, không cần JSDOM |
 
 Không có database. Đề ghi rõ "Không cần xây database thật" và "Tự chuyển bảng thành
-JSON/TypeScript", nên dữ liệu là fixture trong bộ nhớ. Lý do kỹ thuật: `next@16` yêu
-cầu Node ≥ 20.9, còn `node:sqlite` chỉ hết experimental từ Node 22.13 — thêm DB nghĩa
-là người chấm phải có Node mới hơn mức app cần, đổi lấy zero điểm ở thang chấm.
+JSON/TypeScript", nên dữ liệu là fixture trong bộ nhớ. Đổi lại, không có bước
+migrate/seed, không có file DB phải copy, và toàn bộ luật trạng thái nằm trong một
+hàm thuần đọc được bằng mắt.
+
+`node:sqlite` từng được thử (nhánh `with-db`, đã xoá) rồi bỏ: nó thêm một tầng
+runtime — và một yêu cầu Node mới hơn — mà không đổi một dòng logic trạng thái hay
+một pixel giao diện nào.
 
 ### Vì sao không Prisma / React Query
 
@@ -52,12 +56,25 @@ npm start
 
 Không cần biến môi trường, không cần service ngoài, không có bước migrate/seed.
 
+Yêu cầu Node **22.12+ (hoặc 24, hoặc ≥26)** — mức thấp nhất mà Vitest 5 hỗ trợ,
+khai báo ở `engines` và ghim ở `.nvmrc`:
+
+```bash
+nvm use            # đọc .nvmrc
+```
+
 ## Cách kiểm tra
 
 ```bash
-npm test           # 22 test: logic trạng thái + lọc S01 + integrity của fixture
+npm run verify     # lint + typecheck + toàn bộ test, một lệnh
+```
+
+Hoặc từng bước:
+
+```bash
+npm test           # 32 test: logic trạng thái, lọc S01, hợp đồng API
 npm run typecheck  # tsc --noEmit
-npm run lint       # eslint
+npm run lint       # eslint --max-warnings=0
 ```
 
 Kết quả test thực tế:
@@ -67,15 +84,24 @@ $ npm test
 
  RUN  v5.1.0 D:/Projects/ielts-master-junior-test
 
- Test Files  2 passed (2)
-      Tests  22 passed (22)
-   Duration  383ms
+ Test Files  3 passed (3)
+      Tests  32 passed (32)
+   Duration  464ms
 ```
+
+Không có CI trên GitHub: tài khoản chủ repo đang bị khoá Actions vì billing, nên một
+workflow sẽ đỏ ở mọi commit và gây hiểu nhầm là test hỏng. Thay vào đó `npm run verify`
+gói đúng ba bước trên thành một lệnh.
+
+Ngoại lệ duy nhất về mạng: `npm run build` tải font Geist qua `next/font/google`
+và cache vào `.next/`. `npm run dev`, `lint`, `typecheck` và `test` không cần mạng
+sau `npm ci`.
 
 | File | Nội dung |
 |---|---|
 | `tests/status.test.ts` | 4 trường hợp bắt buộc, biên (nộp đúng hạn, `now` đúng hạn, lệch 1 ms), so sánh khác offset, `instantSchema` chặn timestamp thiếu offset |
 | `tests/assignment-service.test.ts` | Gọi đúng hàm mà page và API gọi: A01–A04, B01 vắng mặt trong cả mảng lẫn JSON, S02 chỉ thấy B01, học viên lạ nhận mảng rỗng, format GMT+7, đổi `now` thì chỉ trạng thái đổi, response khớp schema, fixture reject timestamp thiếu offset |
+| `tests/api-route.test.ts` | Gọi thẳng `GET()` của route handler, không mock: `?studentId=S02` (và các biến thể tên/tham số lặp) vẫn trả đúng A01–A04, cookie `demo-s02`/`__proto__`/`constructor` cũng không đổi được học viên, payload không chứa `studentId`/`B01`, header `no-store` |
 
 Kiểm tra API bằng tay:
 
@@ -87,8 +113,15 @@ curl "http://localhost:3000/api/assignments?studentId=S02"
 # vẫn trả A01..A04 — tham số bị bỏ qua hoàn toàn
 
 curl -H "Cookie: ielts_session=demo-s02" http://localhost:3000/api/assignments
-# chỉ B01
+# vẫn trả A01..A04 — danh tính không đến từ cookie
+
+curl -H "Cookie: ielts_session=__proto__" http://localhost:3000/api/assignments
+# vẫn trả A01..A04, HTTP 200
 ```
+
+Dữ liệu S02 chỉ xuất hiện trong test của tầng service
+(`getAssignmentsForStudent("S02")` → `["B01"]`), nơi chứng minh bộ lọc không phải
+no-op. Không có request HTTP nào chạm tới nó.
 
 ## Kết quả đạt được
 
@@ -112,40 +145,55 @@ Thời điểm giả lập: **11/11/2026 09:00 (GMT+7)**.
 src/
   app/
     api/assignments/route.ts   GET — validate payload bằng Zod rồi trả JSON
-    page.tsx                   Server component: bảng (≥sm) + card (<sm)
+    page.tsx                   Server component: bảng (≥md) + card (<md)
     status-cell.tsx            Badge trạng thái
-    globals.css                Token màu shadcn + --success/--warning
-  components/ui/               shadcn: badge, card, table, empty, alert, separator
+    globals.css                Token màu shadcn + --success/--warning/--destructive-surface
+  components/ui/               shadcn: badge, card, table, empty, separator
   lib/
     schema.ts                  Zod: instant, assignment, view, response
     assignments.ts             Fixture A01–A04 + B01, parse qua schema khi import
     status.ts                  getStatus() — thuần, nhận `now` làm tham số
     assignment-service.ts      Nơi duy nhất lọc theo studentId
-    session.ts                 Mock auth: đọc cookie, tra registry ở server
+    session.ts                 Danh tính cố định S01, resolve ở server
     instant.ts                 Parse/format timestamp, luôn theo GMT+7
     now.ts                     SIMULATED_NOW = 2026-11-11T09:00:00+07:00
 tests/
   status.test.ts               Logic trạng thái + biên
   assignment-service.test.ts   Cô lập dữ liệu + integrity của fixture
+  api-route.test.ts            Hợp đồng HTTP: không đầu vào nào đổi được học viên
 ```
 
 ## Cách tránh lộ dữ liệu S02
 
 1. **Không có `studentId` nào đến từ client.** Route handler và page đều không đọc
    query string, body hay path param. `?studentId=S02` bị bỏ qua hoàn toàn.
-2. **Định danh lấy từ session phía server** (`src/lib/session.ts`): cookie
-   `ielts_session` được tra trong registry chỉ server biết. Giá trị lạ
-   (`demo-s99`) rơi về tài khoản mặc định, không tạo được học viên mới.
+2. **Định danh chỉ tồn tại ở server** (`src/lib/session.ts`): `getSession()` trả
+   hằng `S01`, không đọc cookie, header hay bất kỳ đầu vào nào của request. Đây là
+   cách đọc chặt nhất của yêu cầu "không lấy studentId từ URL làm xác thực": không
+   chỉ URL, mà *không đầu vào nào* chọn được học viên.
+   **Vì sao không có nút "đăng nhập S02":** một demo account chọn bằng cookie
+   không ký thì ai đọc mã nguồn cũng đặt được `ielts_session=demo-s02`, và người
+   chấm sẽ thấy đúng thứ đề cấm — payload của S02 trả về qua HTTP. Bộ lọc vẫn đúng,
+   nhưng kết quả thì sai. S02 vì thế chỉ còn trong fixture và trong test của tầng
+   service, đủ để chứng minh `filter` không phải no-op.
+   Trong sản phẩm thật, `getSession()` sẽ xác thực session/JWT đã ký và trả
+   `subject`; các call site không đổi — đó là lý do nó là một hàm `async` duy nhất.
 3. **Lọc ở đúng một chỗ** — `getAssignmentsForStudent()`. Không component nào tự
    `filter()` trên toàn bộ fixture, nên không có đường vòng thứ hai.
 4. **Response không chứa `studentId`.** `AssignmentView` là kiểu riêng, không mang
    trường định danh, nên payload không thể bị dùng lại để hỏi học viên khác.
-5. **Zod kiểm tra cả shape của response** trước khi trả về (`assignmentsResponseSchema.parse`),
-   nên một sửa đổi vô tình làm rò `studentId` sẽ fail ở runtime và trong test.
+5. **Zod `strictObject` kiểm tra shape của response** trước khi trả về
+   (`assignmentsResponseSchema.parse`). Dùng `strictObject` chứ không phải `object`
+   là có chủ ý: mặc định của Zod là **bỏ** key lạ, nên một `studentId` vô tình lọt
+   vào payload sẽ biến mất êm ái — trông như an toàn. Ở chế độ strict, cùng lỗi đó
+   **ném exception**, nên nó lộ ra trong response và trong test
+   (`tests/assignment-service.test.ts`, ca "rejects a leaked studentId").
 6. **Có test khẳng định** `B01` vắng mặt trong cả danh sách lẫn chuỗi JSON, nên nếu ai
    đó sửa hỏng bước lọc thì test đỏ ngay.
-7. Response đặt `Cache-Control: no-store` để dữ liệu của một học viên không nằm
-   trong cache dùng chung.
+7. **Không có cache dùng chung nào giữ được dữ liệu riêng:** API đặt
+   `Cache-Control: no-store`; trang chủ là server component không đọc request nên
+   Next prerender nó thành một HTML duy nhất — nội dung đó giống nhau cho mọi
+   người, vì mọi người đều là S01.
 
 ## Quy ước & giả định
 
@@ -162,9 +210,9 @@ tests/
   `timeZone: "Asia/Ho_Chi_Minh"`, nên không phụ thuộc múi giờ máy chạy.
 - **Thứ tự danh sách**: giữ nguyên thứ tự bảng trong đề. Sắp theo hạn nộp sẽ đảo
   A01/A02 so với đề.
-- **Auth là giả lập**: mặc định đăng nhập S01. Đặt cookie `ielts_session=demo-s02`
-  để xem dữ liệu S02 — dùng để chứng minh việc lọc chạy đúng, không phải tính năng
-  đăng nhập.
+- **Auth là giả lập**: `getSession()` luôn trả S01. Không có đăng nhập, không có
+  cookie, không có tham số nào đổi được điều đó — xem mục "Cách tránh lộ dữ liệu
+  S02".
 
 ## Phần chưa làm
 
@@ -172,5 +220,24 @@ tests/
 - Không có database — dữ liệu là fixture trong bộ nhớ, đúng như đề cho phép.
 - Không có chức năng nộp bài — chỉ đọc và hiển thị.
 - Không có test E2E/trình duyệt tự động; phần UI được kiểm tra thủ công bằng ảnh
-  chụp ở desktop, mobile và dark mode.
+  chụp ở desktop, mobile và dark mode (`docs/screenshot-*.png`).
+- Không có đăng nhập/đăng xuất: danh tính là hằng S01 ở server, nên không có
+  cách nào xem giao diện bằng tài khoản khác — S02 chỉ kiểm chứng được ở tầng
+  service.
+- Tương phản màu được tính tay (xem bảng dưới), không có axe/Lighthouse trong CI.
 - Chưa có i18n; nhãn tiếng Việt viết trực tiếp trong code.
+
+## Tương phản màu
+
+Đo bằng công thức WCAG 2.1 trên các token OKLCH trong `globals.css` (ngưỡng AA cho
+chữ thường: 4.5:1).
+
+| Badge | Sáng | Tối |
+|---|---|---|
+| Chưa nộp (warning trên warning-surface) | 4.57:1 | 8.89:1 |
+| Quá hạn (destructive trên destructive-surface) | 4.62:1 | 5.18:1 |
+| Đã nộp / Nộp trễ (success trên success-surface) | 4.65:1 | 7.85:1 |
+
+Bản đầu dùng `bg-destructive/10` cho badge "Quá hạn", đo được 4.11:1 — dưới ngưỡng.
+Đổi sang token `--destructive-surface` đục (không alpha) để màu nền không phụ thuộc
+màu bên dưới nó.
