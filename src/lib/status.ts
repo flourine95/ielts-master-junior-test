@@ -1,5 +1,5 @@
 import { parseInstant, formatVietnamTime } from "./instant";
-import type { Assignment, AssignmentView, SubmissionState } from "./types";
+import type { AssignmentRow, AssignmentView } from "./schema";
 
 /**
  * Maps one assignment to its status, given a reference instant.
@@ -7,19 +7,19 @@ import type { Assignment, AssignmentView, SubmissionState } from "./types";
  * `now` is a parameter rather than a `Date.now()` call so the rule is pure and
  * directly testable against the fixed 11/11/2026 09:00 reference point.
  *
- * Order matters: a submitted assignment is never "Quá hạn". A late submission
- * is still "Đã nộp", with the late flag carried alongside it. Boundaries are
+ * Order matters: a submitted assignment is never "Quá hạn". A late submission is
+ * still "Đã nộp", with the late flag carried alongside it. Boundaries are
  * inclusive — submitting exactly at the deadline is on time, and `now` exactly
  * at the deadline is not yet overdue (`>` not `>=`).
  */
 export function getStatus(
-  assignment: Pick<Assignment, "dueAt" | "submittedAt">,
+  assignment: Pick<AssignmentRow, "due_at" | "submitted_at">,
   now: number
-): { status: SubmissionState; statusLabel: string; late: boolean } {
-  const due = parseInstant(assignment.dueAt);
+): Pick<AssignmentView, "status" | "statusLabel" | "late"> {
+  const due = parseInstant(assignment.due_at);
 
-  if (assignment.submittedAt !== null) {
-    const late = parseInstant(assignment.submittedAt) > due;
+  if (assignment.submitted_at !== null) {
+    const late = parseInstant(assignment.submitted_at) > due;
     return {
       status: late ? "late-submission" : "submitted",
       statusLabel: "Đã nộp",
@@ -34,18 +34,21 @@ export function getStatus(
   return { status: "not-submitted", statusLabel: "Chưa nộp", late: false };
 }
 
-/** Narrows a stored row into what the UI is allowed to see. */
-export function toView(assignment: Assignment, now: number): AssignmentView {
+/**
+ * Narrows a stored row into what the UI is allowed to see: no `student_id`, and
+ * timestamps pre-formatted in GMT+7 so no component does date maths.
+ */
+export function toView(row: AssignmentRow, now: number): AssignmentView {
   return {
-    id: assignment.id,
-    title: assignment.title,
-    dueAt: assignment.dueAt,
-    dueAtLabel: formatVietnamTime(parseInstant(assignment.dueAt)),
-    submittedAt: assignment.submittedAt,
+    id: row.id,
+    title: row.title,
+    dueAt: row.due_at,
+    dueAtLabel: formatVietnamTime(parseInstant(row.due_at)),
+    submittedAt: row.submitted_at,
     submittedAtLabel:
-      assignment.submittedAt === null
+      row.submitted_at === null
         ? null
-        : formatVietnamTime(parseInstant(assignment.submittedAt)),
-    ...getStatus(assignment, now),
+        : formatVietnamTime(parseInstant(row.submitted_at)),
+    ...getStatus(row, now),
   };
 }

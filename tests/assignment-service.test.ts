@@ -1,8 +1,20 @@
+import { randomUUID } from "node:crypto";
+import { rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { getAssignmentsForStudent } from "@/lib/assignment-service";
+import { openDatabase } from "@/lib/db";
+import { selectAssignmentsByStudent } from "@/lib/assignment-repository";
 import { SIMULATED_NOW } from "@/lib/now";
+import { assignmentsResponseSchema } from "@/lib/schema";
 
-describe("getAssignmentsForStudent — S01 isolation", () => {
+/**
+ * These tests exercise the real query path — `getAssignmentsForStudent` opens a
+ * freshly seeded in-memory database, so a broken WHERE clause fails here rather
+ * than being papered over by an in-memory fixture.
+ */
+describe("assignment data scoping", () => {
   const s01 = getAssignmentsForStudent("S01", SIMULATED_NOW);
 
   it("returns exactly S01's four assignments, in table order", () => {
@@ -17,16 +29,13 @@ describe("getAssignmentsForStudent — S01 isolation", () => {
   it("carries no studentId field that could be replayed against another student", () => {
     for (const assignment of s01) {
       expect(assignment).not.toHaveProperty("studentId");
+      expect(assignment).not.toHaveProperty("student_id");
     }
   });
 
   it("produces the statuses the brief expects at 11/11/2026 09:00 (GMT+7)", () => {
     expect(
-      s01.map((a) => ({
-        id: a.id,
-        status: a.statusLabel,
-        late: a.late,
-      }))
+      s01.map((a) => ({ id: a.id, status: a.statusLabel, late: a.late }))
     ).toEqual([
       { id: "A01", status: "Chưa nộp", late: false },
       { id: "A02", status: "Quá hạn", late: false },
@@ -55,5 +64,44 @@ describe("getAssignmentsForStudent — S01 isolation", () => {
       submittedAtLabel: "10/11/2026 12:00",
       late: true,
     });
+  });
+
+  it("matches the API wire contract", () => {
+    const payload = assignmentsResponseSchema.parse({
+      viewer: { name: "Học viên S01" },
+      simulatedNow: "2026-11-11T09:00:00+07:00",
+      assignments: s01,
+    });
+    expect(payload.assignments).toHaveLength(4);
+  });
+});
+
+describe("repository", () => {
+  it("filters in SQL, so an unknown id never sees seeded rows", () => {
+    const db = openDatabase(":memory:");
+    try {
+      expect(selectAssignmentsByStudent(db, "S01")).toHaveLength(4);
+      expect(selectAssignmentsByStudent(db, "S02")).toHaveLength(1);
+      expect(selectAssignmentsByStudent(db, "NOPE")).toEqual([]);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("seeds only once when the same file is opened twice", () => {
+    const file = path.join(tmpdir(), `ielts-${randomUUID()}.db`);
+    try {
+      const first = openDatabase(file);
+      expect(selectAssignmentsByStudent(first, "S01")).toHaveLength(4);
+      first.close();
+
+      const second = openDatabase(file);
+      expect(selectAssignmentsByStudent(second, "S01")).toHaveLength(4);
+      second.close();
+    } finally {
+      rmSync(file, { force: true });
+      rmSync(`${file}-wal`, { force: true });
+      rmSync(`${file}-shm`, { force: true });
+    }
   });
 });
